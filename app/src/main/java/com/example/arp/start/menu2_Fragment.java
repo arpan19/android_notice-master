@@ -34,8 +34,9 @@ import java.util.ArrayList;
 public class menu2_Fragment extends Fragment {
     public static final String LOG_TAG = "MyApp";
     View rootview;
+
     private ArrayAdapter<String> checkingAdapter;
-    String[] s = new String[1000];
+    String[] s = new String[20];
     public menu2_Fragment()
     {
 
@@ -62,7 +63,7 @@ public class menu2_Fragment extends Fragment {
         if(id == R.id.action_refresh)
         {
             FetchWeatherTask weatherTask = new FetchWeatherTask();
-            weatherTask.execute("94043");
+            updateWeather();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -95,8 +96,10 @@ public class menu2_Fragment extends Fragment {
 
     }
     @Override
+
     public  void onStart()
     {
+
         super.onStart();
         updateWeather();
     }
@@ -104,15 +107,15 @@ public class menu2_Fragment extends Fragment {
 
     public class  FetchWeatherTask extends AsyncTask<String,Void,String[] > {
 
-
-        private String[] getWeatherDataFromJson(String forecastJsonStr,int numDays)
+        int numDays=5;
+        private String[] getWeatherDataFromJson(String forecastJsonStr)
                 throws JSONException {
             try
             {
 
                 JSONArray jarray = new JSONArray(forecastJsonStr);
                 int length = jarray.length();
-Log.v(LOG_TAG,"Getting data");
+                Log.v(LOG_TAG,"Getting data");
 
                 for (int i = 0; i < length; i++) {
                     JSONObject details = jarray.getJSONObject(i);
@@ -134,7 +137,7 @@ Log.v(LOG_TAG,"Getting data");
             catch(Exception e){
                 Log.d(menu2_Fragment.LOG_TAG,"e1");
             }
-return s;
+                return s;
         }
 
         @Override
@@ -147,7 +150,7 @@ return s;
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
             String forecastJsonStr = null;
-int numDays=5;
+
 
 
             try {
@@ -208,7 +211,7 @@ int numDays=5;
 
             }
             try {
-                return getWeatherDataFromJson(forecastJsonStr, numDays);
+                return getWeatherDataFromJson(forecastJsonStr);
             } catch (JSONException e) {
                 Log.e(LOG_TAG, e.getMessage(), e);
                 e.printStackTrace();
