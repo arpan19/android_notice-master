@@ -1,8 +1,10 @@
 package com.example.arp.start;
 
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -14,6 +16,10 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,8 +27,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Created by Arp on 2/8/2015.
@@ -30,6 +34,8 @@ import java.util.List;
 public class menu2_Fragment extends Fragment {
     public static final String LOG_TAG = "MyApp";
     View rootview;
+    private ArrayAdapter<String> checkingAdapter;
+    String[] s = new String[1000];
     public menu2_Fragment()
     {
 
@@ -64,29 +70,75 @@ public class menu2_Fragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        rootview=inflater.inflate(R.layout.menu2_layout,container,false);
 
-        String[] checkinglist = { "name-arpan","name-shreya","name-piyush"};
-        List<String> checklist = new ArrayList<String>(Arrays.asList(checkinglist));
-       ArrayAdapter checkingAdapter = new ArrayAdapter<String>(
+
+      /*  String[] checkinglist = { "name-arpan","name-shreya","name-piyush"};
+        List<String> checklist = new ArrayList<String>(Arrays.asList(checkinglist));*/
+      checkingAdapter = new ArrayAdapter<String>(
                 getActivity(),
                 R.layout.list_all,
-                R.id.list_all,
-                checklist);
+                R.id.list_all_text,
+                new ArrayList<String>());
+        rootview=inflater.inflate(R.layout.menu2_layout,container,false);
         ListView listView = (ListView) rootview.findViewById(R.id.all_companies);
         listView.setAdapter(checkingAdapter);
 
         return rootview;
     }
 
+    private void updateWeather() {
+        FetchWeatherTask weatherTask = new FetchWeatherTask();
+        SharedPreferences prefs=PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location=prefs.getString("","");
+
+        weatherTask.execute(location);
+
+    }
+    @Override
+    public  void onStart()
+    {
+        super.onStart();
+        updateWeather();
+    }
 
 
-    public class  FetchWeatherTask extends AsyncTask<String,Void,String> {
+    public class  FetchWeatherTask extends AsyncTask<String,Void,String[] > {
 
 
+        private String[] getWeatherDataFromJson(String forecastJsonStr,int numDays)
+                throws JSONException {
+            try
+            {
+
+                JSONArray jarray = new JSONArray(forecastJsonStr);
+                int length = jarray.length();
+Log.v(LOG_TAG,"Getting data");
+
+                for (int i = 0; i < length; i++) {
+                    JSONObject details = jarray.getJSONObject(i);
+                    String serial_number= details.getString("serial_number");
+                    String company_name= details.getString("company_name");
+                    String dat= details.getString("dat");
+                    String eligibility_criteria= details.getString("eligibility_criteria");
+                    String branch= details.getString("branch");
+                    String salary= details.getString("salary");
+                    String deadline= details.getString("deadline");
+                    String other_info= details.getString("other_info");
+                    s[i]="serial_number"+serial_number+"company_name"+company_name+"dat"+dat+"eligibility_criteria"+eligibility_criteria+"branch"+branch+
+                            "salary"+salary+"deadline"+deadline+"other_info"+other_info;
+                    Log.d("sample",s[i]);
+
+                }
+
+            }
+            catch(Exception e){
+                Log.d(menu2_Fragment.LOG_TAG,"e1");
+            }
+return s;
+        }
 
         @Override
-        protected String doInBackground(String... params)
+        protected String[] doInBackground(String... params)
         {
             if(params.length==0)
             {
@@ -95,12 +147,12 @@ public class menu2_Fragment extends Fragment {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
             String forecastJsonStr = null;
-
+int numDays=5;
 
 
             try {
 
-                final String FORECAST_BASE_URL= "http://codeworld.uphero.com/testi.php";
+                final String FORECAST_BASE_URL= "http://codeworld.uphero.com/details.php";
 
 
                 Uri builtUri=Uri.parse(FORECAST_BASE_URL).buildUpon().build();
@@ -112,12 +164,14 @@ public class menu2_Fragment extends Fragment {
                 Log.v(LOG_TAG,"built URI"+ urlConnection.toString());
                 urlConnection.setRequestMethod("GET");
                 //error here in connection
+                urlConnection.connect();
+                Log.v(LOG_TAG,"Connection established");
                 InputStream inputStream = urlConnection.getInputStream();
-                Log.v(LOG_TAG,"inputstream is "+inputStream.toString());
+
                 StringBuffer buffer = new StringBuffer();
-                Log.v(LOG_TAG,"buffer is"+ buffer.toString());
+
                 if (inputStream == null) {
-                    forecastJsonStr=null;
+                    return null;
                 }
                 reader = new BufferedReader(new InputStreamReader(inputStream));
                 String line;
@@ -125,15 +179,20 @@ public class menu2_Fragment extends Fragment {
                     buffer.append(line + "\n");
 
                 }
-                if (buffer.length() == 0) {
-                    forecastJsonStr=null;
+                if (buffer.length() == 0)
+                {
+                    return null;
                 }
                 forecastJsonStr = buffer.toString();
 
-            } catch (IOException e) {
 
 
-            } finally {
+
+            }
+            catch (IOException e){
+                return null;
+            }
+            finally {
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
@@ -148,10 +207,33 @@ public class menu2_Fragment extends Fragment {
                 }
 
             }
+            try {
+                return getWeatherDataFromJson(forecastJsonStr, numDays);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                e.printStackTrace();
 
-            Log.v(LOG_TAG,"built URI"+ forecastJsonStr);
-            return forecastJsonStr;
+            }
+            return null;
+
+
+        }
+
+
+        @Override
+        protected void onPostExecute(String[] result)
+        {
+            if(result!=null)
+            {
+                checkingAdapter.clear();
+                for(String dayForecastStr : result)
+                {
+                    checkingAdapter.add(dayForecastStr);
+                }
+            }
+        }
 
         }
     }
-}
+
+

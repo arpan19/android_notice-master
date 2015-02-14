@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:textAppearance="?android:attr/textAppearanceLarge"
     android:text="section2"
-    android:id="@+id/list_all"
+    android:id="@+id/list_all_text"
     android:layout_alignParentTop="true"
     android:layout_centerHorizontal="true"
     android:gravity="center_vertical"
