@@ -1,4 +1,4 @@
-package com.example.arp.start;
+package com.example.arp.start.test;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

@@ -1,68 +1,90 @@
 package com.example.arp.start;
 
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.util.Log;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
+import android.support.v4.widget.SimpleCursorAdapter;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.ArrayList;
+import com.example.arp.start.data.DBContract;
+import com.example.arp.start.data.DBContract.pat_table;
 
 /**
  * Created by Arp on 2/8/2015.
  */
-public class menu2_Fragment extends Fragment {
+public class menu2_Fragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>
+{
     public static final String LOG_TAG = "MyApp";
     View rootview;
+    private  String mLocation;
+    private  static  final int FORECAST_LOADER=0;
 
-    private ArrayAdapter<String> checkingAdapter;
-    String[] s = new String[20];
-    public menu2_Fragment()
-    {
+    private  static final String[] FORECAST_COLUMNS ={
+            DBContract.pat_table.TB_NAME+"."+pat_table._ID,
+            pat_table.COL_SERIAL_NUMBER,
+            pat_table.COL_COMPANY_NAME,
+            pat_table.COL_DATE,
+            pat_table.COL_ELIGIBILITY_CRITERIA,
+            pat_table.COL_BRANCHES,
+            pat_table.COL_SALARY,
+            pat_table.COL_DEADLINE,
+            pat_table.COL_OTHER_INFO
+    };
+
+    public  static  final int COLU_ID =0;
+    public  static  final int COLU_COMPANY_NAME=1;
+    public  static  final int COLU_DATE=2;
+    public  static  final int COLU_ELIGIBILITY_CRITERIA=3;
+    public  static  final int COLU_BRANCHES=4;
+    public  static  final int COLU_SALARY=5;
+    public  static  final int COLU_DEADLINE=6;
+    public  static  final int COLU_OTHER_INFO=7;
+    public menu2_Fragment() {
 
     }
     @Override
-    public void onCreate(Bundle savedInstanceState )
-    {
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        getLoaderManager().initLoader(FORECAST_LOADER, null, this);
+
+    }
+  private SimpleCursorAdapter checkingAdapter;
+    String[] s = new String[20];
+
+
+
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
     }//for a refresh menu ,has a menu
 
 
     @Override
-    public  void onCreateOptionsMenu(Menu menu,MenuInflater inflater)
-    {
-        inflater.inflate(R.menu.refresh,menu);
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.refresh, menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item)
 
     {
-        int id= item.getItemId();
-        if(id == R.id.action_refresh)
-        {
-            FetchWeatherTask weatherTask = new FetchWeatherTask();
+        int id = item.getItemId();
+        if (id == R.id.action_refresh) {
+            fetch_Task weatherTask = new fetch_Task(getActivity());
             updateWeather();
             return true;
         }
@@ -75,37 +97,107 @@ public class menu2_Fragment extends Fragment {
 
       /*  String[] checkinglist = { "name-arpan","name-shreya","name-piyush"};
         List<String> checklist = new ArrayList<String>(Arrays.asList(checkinglist));*/
-      checkingAdapter = new ArrayAdapter<String>(
+       checkingAdapter = new SimpleCursorAdapter(
+
+
                 getActivity(),
                 R.layout.list_all,
-                R.id.list_all_text,
-                new ArrayList<String>());
-        rootview=inflater.inflate(R.layout.menu2_layout,container,false);
+                null,
+                new String[]{
+                        pat_table.COL_SERIAL_NUMBER,
+                        pat_table.COL_COMPANY_NAME,
+                        pat_table.COL_DATE,
+                        pat_table.COL_ELIGIBILITY_CRITERIA,
+                        pat_table.COL_BRANCHES,
+                        pat_table.COL_SALARY,
+                        pat_table.COL_DEADLINE,
+                        pat_table.COL_OTHER_INFO
+
+                },
+                new int[]{R.id.serial_number,
+                        R.id.company_name,
+                        R.id.date,
+                        R.id.eligibility_criteria,
+                        R.id.branch,
+                        R.id.salary,
+                        R.id.deadline,
+                        R.id.other_info
+
+                            },
+               0
+            );
+        rootview = inflater.inflate(R.layout.menu2_layout, container, false);
         ListView listView = (ListView) rootview.findViewById(R.id.all_companies);
         listView.setAdapter(checkingAdapter);
 
         return rootview;
     }
 
+
+
     private void updateWeather() {
-        FetchWeatherTask weatherTask = new FetchWeatherTask();
-        SharedPreferences prefs=PreferenceManager.getDefaultSharedPreferences(getActivity());
-        String location=prefs.getString("","");
+        fetch_Task weatherTask = new fetch_Task(getActivity());
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = prefs.getString("", "");
 
         weatherTask.execute(location);
 
     }
+
     @Override
 
-    public  void onStart()
-    {
+    public void onStart() {
 
         super.onStart();
         updateWeather();
     }
 
 
-    public class  FetchWeatherTask extends AsyncTask<String,Void,String[] > {
+
+
+        @Override
+       public Loader<Cursor> onCreateLoader(int id, Bundle args)
+        {
+
+
+
+
+
+                Uri tableUri= pat_table.Content_Uri;
+
+                       /*     String sortOrder = WeatherEntry.COLUMN_DATETEXT + " ASC";
+
+                    mLocation = Utility.getPreferredLocation(getActivity());
+           Uri weatherForLocationUri = WeatherEntry.buildWeatherLocationWithStartDate(
+                            mLocation, startDate); */
+
+                                 return new CursorLoader
+                                         (
+                                                 getActivity(),
+                                                    tableUri,
+                                                FORECAST_COLUMNS,
+                                                     null,
+                                                     null,
+                                                     null
+                                          );
+        }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        checkingAdapter.swapCursor(data);
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        checkingAdapter.swapCursor(null);
+    }
+}
+
+
+  /*  public class  FetchWeatherTask extends AsyncTask<String,Void,String[] >
+  {
+
 
         int numDays=5;
         private String[] getWeatherDataFromJson(String forecastJsonStr)
@@ -140,7 +232,7 @@ public class menu2_Fragment extends Fragment {
                 return s;
         }
 
-        @Override
+ /*       @Override
         protected String[] doInBackground(String... params)
         {
             if(params.length==0)
@@ -239,4 +331,4 @@ public class menu2_Fragment extends Fragment {
         }
     }
 
-
+*/
